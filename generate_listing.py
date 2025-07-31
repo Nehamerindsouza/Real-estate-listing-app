@@ -1,21 +1,17 @@
-import os
 import streamlit as st
-from openai import OpenAI # Corrected import
+import cohere  # Use Cohere instead of OpenAI
 
-# For Streamlit Cloud secrets and local .streamlit/secrets.toml
-# Do NOT include a hardcoded API key as the default value here.
-# st.secrets.get will retrieve it if available, otherwise it will be None.
-openai_api_key = st.secrets.get("openai_api_key")
+# Get Cohere API key from secrets
+cohere_api_key = st.secrets.get("cohere_api_key")
 
-# Ensure the API key is set before initializing the client
-if not openai_api_key:
-    # If running locally and not using .streamlit/secrets.toml,
-    # you might want to fall back to environment variable or raise an error.
-    # For Streamlit Cloud, st.secrets is the primary mechanism.
-    st.error("OpenAI API key not found. Please set it in your Streamlit secrets or environment variables.")
-    st.stop() # Stop the app if API key is missing
+if not cohere_api_key:
+    st.error("Cohere API key not found. Please set it in your Streamlit secrets as 'cohere_api_key'.")
+    st.stop()
 
-st.title("🏠 Real Estate Listing Generator")
+# Initialize Cohere client
+co = cohere.Client(cohere_api_key)
+
+st.title("🏠 Real Estate Listing Generator (Cohere)")
 st.markdown("Generate professional property listings using property features and neighborhood info.")
 
 with st.form("listing_form"):
@@ -44,22 +40,16 @@ if submitted:
         """
 
         try:
-            # Initialize the OpenAI client with the retrieved API key
-            client = OpenAI(api_key=openai_api_key) # Corrected initialization
-
-            completion = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                ],
+            response = co.generate(
+                model='command',  # Or try 'command-light'
+                prompt=prompt,
+                max_tokens=300,
+                temperature=0.7
             )
-            listing = completion.choices[0].message.content.strip()
+            listing = response.generations[0].text.strip()
             st.success("Listing generated!")
             st.text_area("Generated Listing", listing, height=200)
 
         except Exception as e:
             st.error(f"Error generating listing: {e}")
-            st.info("Please ensure your OpenAI API key is correct and you have sufficient credits.")
+            st.info("Please ensure your Cohere API key is correct and active.")
